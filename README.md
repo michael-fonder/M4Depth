@@ -50,6 +50,17 @@ If you find our work useful in your research please consider citing our paper:
 year = {2021}
 }
 ```
+If you use the [Mid-Air dataset](https://midair.ulg.ac.be/) in your research, please consider citing the related paper:
+
+```
+@INPROCEEDINGS{Fonder2019MidAir,
+author = {Michael Fonder and Marc Van Droogenbroeck},
+title = {Mid-Air: A multi-modal dataset for extremely low altitude drone flights},
+booktitle = {Conference on Computer Vision and Pattern Recognition Workshop (CVPRW)},
+year = {2019},
+month = {June}
+} 
+```
 
 ## Dependencies
 
