@@ -78,15 +78,30 @@ This script generates trajectory sequences with a length of 8 frames and automat
 
 ### Custom data
 
-You can also train or test our newtork on your own data. You can generate your own protobuffer files by repurpusing our "midair-protobuf_generation.py" script. When creating your own protobuffer files, you should pay attention to two major parameters; All sequences should have the same length and each element of a sequence should come with the following data:
-* "image/color_i" : the binary data of the jpeg picture encoding the color data of the frame
-* "Image/depth_i" : the binary data of the 16-bit png file encoding the stereodisparity map
-* "data/omega_i" : a lis of three float32 numbers corresponding to the angular rotation between two consecutive frames
-* "data/trans_i" : a lis of three float32 numbers corresponding to the translation between two consecutive frames
+You can also train or test our newtork on your own data. You can generate your own protobuffer files by repurpusing our *midair-protobuf_generation.py* script. When creating your own protobuffer files, you should pay attention to two major parameters; All sequences should have the same length and each element of a sequence should come with the following data:
+* "image/color_*i*" : the binary data of the jpeg picture encoding the color data of the frame
+* "Image/depth_*i*" : the binary data of the 16-bit png file encoding the stereodisparity map
+* "data/omega_*i*" : a lis of three float32 numbers corresponding to the angular rotation between two consecutive frames
+* "data/trans_*i*" : a lis of three float32 numbers corresponding to the translation between two consecutive frames
 
-Translations and rotations are expressed in the standard camera frame of refence axis system.
+The subscript *i* has to be replaced by the index of the data within the trajectory. Translations and rotations are expressed in the standard camera frame of refence axis system.
 
 ## Training
 
+You can launch a training or a finetuning (if the log_dir already exists) by exectuting the following command line:
+```shell
+python3 m4depth_pipeline.py --train_datadir=path/to/protobuf/dir --log_dir=path/to/logdir --dataset=midair --arch_depth=6 --db_seq_len=8 --seq_len=6 --num_batches=200000 -b=3 -g=1 --summary_interval_secs=900 --save_interval_secs=1800
+```
+If needed, other options are available for the training phase and are described in *pipeline_options.py* and in *m4depth_options.py* files. Please note that the code can run on multiple GPUs to speedup the training.
+
 ## Testing/Evaluation
+
+You can launch the evaluation of your test samples by exectuting the following command line:
+```shell
+python3 m4depth_pipeline.py --test_datadir=path/to/protobuf/dir --log_dir=path/to/logdir --dataset=midair --arch_depth=6 --db_seq_len=8 --seq_len=8 --b=3 -g=1
+```
+If needed, other options are available for the evaluation phase and are described in *pipeline_options.py* and in *m4depth_options.py* files.
+
+### Pretrained model
+
 
