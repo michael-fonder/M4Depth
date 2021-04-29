@@ -104,4 +104,8 @@ If needed, other options are available for the evaluation phase and are describe
 
 ### Pretrained model
 
+We provide pretrained weights for our model in the "trained_weights" directory. Testing or evaluating a dataset from these weight can be done by executing the following command line:
+```shell
+python3 m4depth_pipeline.py --test_datadir=path/to/protobuf/dir --log_dir=trained_weights/M4Depth-d6 --dataset=midair --arch_depth=6 --db_seq_len=8 --seq_len=8 --b=3 -g=1
+```
 
