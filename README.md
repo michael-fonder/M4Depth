@@ -46,19 +46,19 @@ If you find our work useful in your research please consider citing our paper:
   title     = {M4Depth: A motion-based approach for monocular depth estimation on video sequences},
   author    = {Michael Fonder and Damien Ernst and Marc Van Droogenbroeck},
   booktitle = {arXiv},
-  month = {May},
-year = {2021}
+  month     = {May},
+  year      = {2021}
 }
 ```
 If you use the [Mid-Air dataset](https://midair.ulg.ac.be/) in your research, please consider citing the related paper:
 
 ```
 @INPROCEEDINGS{Fonder2019MidAir,
-author = {Michael Fonder and Marc Van Droogenbroeck},
-title = {Mid-Air: A multi-modal dataset for extremely low altitude drone flights},
-booktitle = {Conference on Computer Vision and Pattern Recognition Workshop (CVPRW)},
-year = {2019},
-month = {June}
+  author    = {Michael Fonder and Marc Van Droogenbroeck},
+  title     = {Mid-Air: A multi-modal dataset for extremely low altitude drone flights},
+  booktitle = {Conference on Computer Vision and Pattern Recognition Workshop (CVPRW)},
+  year      = {2019},
+  month     = {June}
 } 
 ```
 
@@ -91,9 +91,9 @@ This script generates trajectory sequences with a length of 8 frames and automat
 
 You can also train or test our newtork on your own data. You can generate your own protobuffer files by repurpusing our *midair-protobuf_generation.py* script. When creating your own protobuffer files, you should pay attention to two major parameters; All sequences should have the same length and each element of a sequence should come with the following data:
 * "image/color_*i*" : the binary data of the jpeg picture encoding the color data of the frame
-* "Image/depth_*i*" : the binary data of the 16-bit png file encoding the stereodisparity map
-* "data/omega_*i*" : a lis of three float32 numbers corresponding to the angular rotation between two consecutive frames
-* "data/trans_*i*" : a lis of three float32 numbers corresponding to the translation between two consecutive frames
+* "Image/depth_*i*" : the binary data of the 16-bit png file encoding the stereo disparity map
+* "data/omega_*i*" : a list of three float32 numbers corresponding to the angular rotation between two consecutive frames
+* "data/trans_*i*" : a list of three float32 numbers corresponding to the translation between two consecutive frames
 
 The subscript *i* has to be replaced by the index of the data within the trajectory. Translations and rotations are expressed in the standard camera frame of refence axis system.
 
