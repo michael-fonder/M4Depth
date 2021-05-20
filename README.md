@@ -39,11 +39,10 @@ This is the reference TensorFlow implementation for training and testing depth e
     <td> <img src="assets/img/06-m4.PNG"  alt="1" width = 128px height = 128px ></td>
    </tr>
   <br>
-      <tr>
-        Some samples produced by our method: the first line shows the RGB picture capured by the camera, the secon the ground-truth depth map and the last one the results prduced by our method.
-    </tr>
-  <br>
 </p>
+  Some samples produced by our method: the first line shows the RGB picture capured by the camera, the secon the ground-truth depth map and the last one the results prduced by our method.
+  
+<hr>
 
 If you find our work useful in your research please consider citing our paper:
 
