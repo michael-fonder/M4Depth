@@ -1,15 +1,12 @@
 # M4Depth
 
-Code coming soon
-
-
 This is the reference TensorFlow implementation for training and testing depth estimation models using the method described in
 
 > **M4Depth: A motion-based approach for monocular depth estimation on video sequences**
 >
 > [Michaël Fonder](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u225873), [Damien Ernst](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u030242) and [Marc Van Droogenbroeck](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u182591) 
 > 
-> [arXiv pdf](https://arxiv.org/)
+> [arXiv pdf](https://arxiv.org/pdf/2105.09847.pdf)
 
 <p align="center">
   <tr>
