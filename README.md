@@ -37,7 +37,7 @@ This is the reference TensorFlow implementation for training and testing depth e
    </tr>
   <br>
 </p>
-  Some samples produced by our method: the first line shows the RGB picture capured by the camera, the secon the ground-truth depth map and the last one the results prduced by our method.
+  Some samples produced by our method: the first line shows the RGB picture capured by the camera, the second the ground-truth depth map and the last one the results produced by our method.
   
 <hr>
 
