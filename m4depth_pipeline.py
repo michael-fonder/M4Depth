@@ -14,6 +14,8 @@ import tensorflow as tf
 import numpy as np
 import math
 import argparse
+import os
+from PIL import Image
 
 from preprocess import Preprocess
 
