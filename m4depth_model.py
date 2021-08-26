@@ -22,9 +22,9 @@ class M4Depth:
         self.reg_weight = 0.0004
 
         if cmd.cpu_matmul:
-            self.MATMUL_DEVICE = "/gpu:0"
-        else:
             self.MATMUL_DEVICE = "/cpu:0"
+        else:
+            self.MATMUL_DEVICE = "/gpu:0"
 
         if pipeline_instance is None:
             self.create_save_collection = lambda : None
@@ -33,6 +33,12 @@ class M4Depth:
 
         self.prev_f_pyr = None
         self.prev_d_pyr = None
+
+        self.prev_f_pyr_val = None
+        self.prev_d_pyr_val = None
+
+        self.prev_f_pyr_val = None
+        self.prev_d_pyr_val = None
 
     def build_feature_pyramid(self, image):
         with tf.compat.v1.variable_scope("feature_pyramid") as scope:
@@ -138,7 +144,6 @@ class M4Depth:
                     if d_pyramid_t0 is None or self.special_case==2:
                         d_0 = tf.ones([b, h, w, 1])
                     else:
-                        print(d_pyramid_t0[cnter])
                         d_0 = self.recompute_depth(d_pyramid_t0[cnter], rot, trans, focal_l)
 
                     if d_prev_l is None:
@@ -182,19 +187,25 @@ class M4Depth:
     def init_network(self, rgb_im, rot, trans, focal_length):
         self.prev_f_pyr = None
         self.prev_d_pyr = None
-        self.estimate_depth(rgb_im, rot, trans, focal_length)
 
-    def estimate_depth(self, rgb_im, rot, trans, focal_length):
+        self.prev_f_pyr_val = None
+        self.prev_d_pyr_val = None
+        self.estimate_depth(rgb_im, rot, trans, focal_length, True)
 
-        if self.prev_f_pyr is None:
+    def estimate_depth(self, rgb_im, rot, trans, focal_length, is_training):
+        if is_training:
+            prev_d_pyr = self.prev_d_pyr
+            prev_f_pyr = self.prev_f_pyr
+        else:
+            prev_d_pyr = self.prev_d_pyr_val
+            prev_f_pyr = self.prev_f_pyr_val  
+        
+        reuse_f = True
+        reuse_d = True
+        if prev_f_pyr is None:
             reuse_f = False
-        else:
-            reuse_f = True
-
-        if self.prev_d_pyr is None:
+        if prev_d_pyr is None:
             reuse_d = False
-        else:
-            reuse_d = True
 
         with tf.compat.v1.variable_scope('M4Depth'):
             with tf.compat.v1.variable_scope('features', reuse=reuse_f):
@@ -206,25 +217,30 @@ class M4Depth:
                     d_pyramid = self.d_est_pyramid(f_enc_pyr, f_enc_pyr, None, rot, trans, focal_length)
                     self.create_save_collection()
 
-                    self.prev_d_pyr = d_pyramid
+                    prev_d_pyr = d_pyramid
                     est_depth = d_pyramid[0]
                     with tf.control_dependencies([est_depth]):
-                        self.prev_d_pyr = d_pyramid
-
-            elif self.prev_f_pyr is not None:
+                        prev_d_pyr = d_pyramid
+            elif prev_f_pyr is not None:
                 with tf.compat.v1.variable_scope('upscaler', reuse=reuse_d):
-                    d_pyramid = self.d_est_pyramid(self.prev_f_pyr, f_enc_pyr, self.prev_d_pyr, rot, trans, focal_length)
+                    d_pyramid = self.d_est_pyramid(prev_f_pyr, f_enc_pyr, prev_d_pyr, rot, trans, focal_length)
                     self.create_save_collection()
 
-                    self.prev_d_pyr = d_pyramid
+                    prev_d_pyr = d_pyramid
                     est_depth = d_pyramid[0]
                     with tf.control_dependencies([est_depth]):
-                        self.prev_d_pyr = d_pyramid
-
+                        prev_d_pyr = d_pyramid
             else:
                 est_depth = None
 
-            self.prev_f_pyr = f_enc_pyr
+            prev_f_pyr = f_enc_pyr
+
+            if is_training:
+                self.prev_d_pyr = prev_d_pyr
+                self.prev_f_pyr = prev_f_pyr
+            else:
+                self.prev_d_pyr_val = prev_d_pyr
+                self.prev_f_pyr_val = prev_f_pyr
 
         return est_depth
 
