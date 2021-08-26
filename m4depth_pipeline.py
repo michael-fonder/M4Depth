@@ -98,11 +98,11 @@ class M4DepthPipeline(mgp.PipelineModel):
         if self.special_case != 1:
             self.model.init_network(im_color_seq[0], rot_seq[0], pos_seq[0], focal_length)
         else:
-            d_est = self.model.estimate_depth(im_color_seq[0], rot_seq[0], pos_seq[0], focal_length)
+            d_est = self.model.estimate_depth(im_color_seq[0], rot_seq[0], pos_seq[0], focal_length, self.is_training)
             d_pyr_seq.append(self.model.get_level_predictions())
 
         for i in range(1, self.seq_len):
-            d_est = self.model.estimate_depth(im_color_seq[i], rot_seq[i], pos_seq[i], focal_length)
+            d_est = self.model.estimate_depth(im_color_seq[i], rot_seq[i], pos_seq[i], focal_length, self.is_training)
             d_pyr_seq.append(self.model.get_level_predictions())
 
         with tf.compat.v1.variable_scope("L1_loss") as scope:
@@ -200,8 +200,7 @@ class M4DepthPipeline(mgp.PipelineModel):
                 ]
 
     def eval_func(self, data_batch, var_scope):
-
-        self.is_training = True
+        self.is_training = False
 
         im_color_seq = tf.split(data_batch[0], self.seq_len, axis=1)
         im_depth_seq = tf.split(data_batch[1], self.seq_len, axis=1)
@@ -220,7 +219,7 @@ class M4DepthPipeline(mgp.PipelineModel):
         d_est_list = []
         exec_time = 0.0
         for i in range(self.seq_len):
-            d_est = self.model.estimate_depth(im_color_seq[i], rot_seq[i], pos_seq[i], focal_length)
+            d_est = self.model.estimate_depth(im_color_seq[i], rot_seq[i], pos_seq[i], focal_length, self.is_training)
 
             if i != 0:
                 #d_pyr_seq.append(self.prev_d_pyr)
