@@ -158,7 +158,7 @@ python main.py --help
 
 ### Processing outputs
 
-You can vizualize, save or postprocess the outputs of the network easily by implementing the code you want in the `predict` case of the `main.py` file.
+You can visualize, save or postprocess the outputs of the network easily by implementing the code you want in the `predict` case of the `main.py` file.
 
 ## Running on your own images
 
@@ -209,6 +209,6 @@ If you use one of the datasets in your research, please consider citing the rela
 
 ## License
 
-Our code is license under the AGPLv3 - See the [LICENSE](LICENSE) file for details.
+Our code is licensed under the AGPLv3 - See the [LICENSE](LICENSE) file for details.
 
 The cuda implementation of the backprojection is not ours and is licensed under BSD 3 Clause License (see the corresponding [LICENSE](cuda_backproject/LICENSE) )
