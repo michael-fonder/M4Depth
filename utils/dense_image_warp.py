@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Modifications brought by Michael Fonder 2021
+# Modifications brought by Michael Fonder 2022
 # ==============================================================================
+
 """Image warping using per-pixel flow vectors."""
 from __future__ import absolute_import
 from __future__ import division
@@ -28,6 +29,33 @@ from tensorflow.python.framework import ops
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import check_ops
 from tensorflow.python.ops import math_ops
+
+import tensorflow as tf
+import os.path as osp
+
+from tensorflow.python.framework import ops
+
+filename = osp.join(*[osp.dirname(__file__), 'special_ops', 'backproject.so'])
+if osp.isfile(filename):
+    _backproject_module = tf.load_op_library(filename)
+
+    back_project = _backproject_module.back_project
+    back_project_grad = _backproject_module.back_project_grad
+
+
+    @ops.RegisterGradient("BackProject")
+    def _back_project_grad(op, grad):
+        inputs = op.inputs[0]
+        coords = op.inputs[1]
+        inputs_grad, coords_grad = back_project_grad(inputs, coords, grad)
+
+        return [inputs_grad, coords_grad]
+
+    use_cuda_backproject = True
+
+else:
+    print("Could not import cuda Backproject Module, using python implementation")
+    use_cuda_backproject = False
 
 
 def _interpolate_bilinear(grid,
@@ -197,10 +225,6 @@ def dense_image_warp(image, flow, name='dense_image_warp'):
                 of dimensions.
   """
   with ops.name_scope(name):
-    # batch_size, height, width, channels = (array_ops.shape(image)[0],
-    #                                        array_ops.shape(image)[1],
-    #                                        array_ops.shape(image)[2],
-    #                                        array_ops.shape(image)[3])
     shape = image.get_shape().as_list()
     if len(shape) == 3:
       batch_size = 1
@@ -216,21 +240,29 @@ def dense_image_warp(image, flow, name='dense_image_warp'):
     stacked_grid = math_ops.cast(
         array_ops.stack([grid_y, grid_x], axis=2), flow.dtype)
 
-    h_range = math_ops.range(height, dtype=flow.dtype)
-    w_range = math_ops.range(width, dtype=flow.dtype)
-    mesh = array_ops.transpose(array_ops.meshgrid(h_range, w_range), perm=[2, 1, 0])
     batched_grid = array_ops.expand_dims(stacked_grid, axis=0)
     query_points_on_grid = batched_grid + flow
-    query_points_flattened = array_ops.reshape(query_points_on_grid,
-                                               [batch_size, height * width, 2])
-    # Compute values at the query points, then reshape the result back to the
-    # image grid.
-    interpolated = _interpolate_bilinear(image, query_points_flattened)
+
+    if use_cuda_backproject:
+      f_map = tf.expand_dims(image, -2)
+      query_points_on_grid = tf.clip_by_value(query_points_on_grid, [0., 0.], [float(height - 1), float(width - 1)])
+      coords = tf.reverse(query_points_on_grid, [-1])
+      coords = tf.reshape(coords, [batch_size, height, width, 1, 1, 2])
+      interpolated = back_project(f_map, coords)
+      interpolated = tf.reshape(interpolated, [1, height, width, 1, batch_size, channels])
+      interpolated = tf.squeeze(interpolated)
+    else:
+      query_points_flattened = array_ops.reshape(query_points_on_grid,
+                                                 [-1, height * width, 2])
+      # Compute values at the query points, then reshape the result back to the
+      # image grid.
+      interpolated = _interpolate_bilinear(image, query_points_flattened)
+
     if len(shape) == 3:
       interpolated = array_ops.reshape(interpolated,
                                      [height, width, channels])
     else:
       interpolated = array_ops.reshape(interpolated,
-                                       [batch_size, height, width, channels])
+                                       [-1, height, width, channels])
 
     return interpolated

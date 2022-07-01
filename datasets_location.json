@@ -1,0 +1,6 @@
+{
+  "_comment": "relative paths should be written relative to this file",
+  "midair" : "./datasets/MidAir",
+  "kitti-raw": "./datasets/Kitti",
+  "tartanair": "./datasets/TartanAir"
+}
