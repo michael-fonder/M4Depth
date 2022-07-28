@@ -81,9 +81,11 @@ unzip '*.zip'
 
 ### Datasets
 
-Our set of experiments relies on three different datasets. We provide scripts to download them easily in the `script`directory, and detail how to use them hereunder. Please store each dataset in a disctinct directory to prevent issues with the scripts.
+Our set of experiments relies on three different datasets. Our code refers to the [`dataset_location.json`](dataset_location.json) configuration file to know where the data are located.
 
-If you already have a dataset on your computer, you can edit the corresponding path in the `dataset_location.json` file instead of downloading it. 
+We provide scripts to download the datasets easily in the [`scripts`](scripts) directory, and detail how to use them hereunder. Please store each dataset in a disctinct directory to prevent issues with the scripts.
+
+If you use our scripts to download the datasets, you won't have to edit the [`dataset_location.json`](dataset_location.json) configuration file. If you already have some datasets on your computer, you can edit the json file instead of downloading them. We provide information on how to do this hereunder.
 
 #### Mid-Air [[1](#ref_1)]
 
@@ -110,6 +112,14 @@ To automatically download and extract the scenes from the TartanAir dataset used
 ```shell
 bash  scripts/0c-get_tartanair.sh path/to/desired/dataset/location
 ```
+
+#### Editing [`dataset_location.json`](dataset_location.json) (facultative)
+
+The [`dataset_location.json`](dataset_location.json) configuration file simply provides key-value pairs where:
+*    the key is the name of one of the available datasets listed in the [`dataloaders/__init__.py`](dataloaders/__init__.py) file, and
+*    the value stores a string that is the path pointing to the root directory of the data location for the corresponding dataset. This path can be relative or absolute. 
+
+If you use our script to download the datasets, you don't have to edit it. However, if you already have some datasets on your computer, you can edit the paths in the json file instead of downloading them again with our scripts.
 
 ## Reproducing paper results
 
