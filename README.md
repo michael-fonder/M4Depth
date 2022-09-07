@@ -49,7 +49,7 @@ This repository contains all the material necessary to reproduce the results pre
    </tr>
   <br>
 </p>
-  Samples produced by our method trained on Mid-Air when tested on Mid-Air (three leftmost columns) and when tested in generalization on TartanAir (two rightmost columns): the first line shows the RGB picture capured by the camera, the second the ground-truth depth map and the last one the results produced by our method.
+  Samples produced by our method trained on Mid-Air when tested on Mid-Air (three leftmost columns) and when tested in generalization on TartanAir (two rightmost columns): the first line shows the RGB picture capured by the camera, the second the results produced by our method and the last one the ground-truth depth map.
   
 <hr>
 
