@@ -139,7 +139,7 @@ class CustomKittiValidationCallback(ks.callbacks.Callback):
         self.cmd = cmd_args
         self.args = args
 
-    def on_epoch_end(self, epoch, logs=None):
+        def on_epoch_end(self, epoch, logs=None):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         working_dir = os.getcwd()
         rel_path = os.path.relpath(dir_path, start=working_dir)
@@ -150,20 +150,23 @@ class CustomKittiValidationCallback(ks.callbacks.Callback):
                                               '--ckpt_dir="$savepath" ' \
                                               '--records_path=%s ' % (self.cmd.db_path_config, os.path.join(rel_path,"data/kitti-raw-filtered/val_data"))
         opt_args = ''
-        forbidden_args = ['dataset', 'db_path_config', 'ckpt_dir', 'records_path', 'arch_depth', 'seq_len', 'db_seq_len']
-        for arg in self.args:
+        forbidden_args = ['mode', 'dataset', 'db_path_config', 'ckpt_dir', 'records_path', 'arch_depth', 'seq_len', 'db_seq_len']
+        for key, value in self.cmd.__dict__.items():
             skip = False
-            for f_arg in forbidden_args:
-                if f_arg in arg:
+            for arg in forbidden_args:
+                if key in arg:
                     skip=True
 
             if skip:
                 continue
 
-            opt_args += arg + ' '
+            if isinstance(value, bool) and value:
+                opt_args += '--'+ key + ' '
+            elif value:
+                opt_args += '--' + key + '=' + str(value) + ' '
 
         options = '--seq_len=4 --db_seq_len=4 --arch_depth=%i ' % (self.cmd.arch_depth)
-
+        print(save_path + main_command + options + opt_args + "> /dev/null 2>&1 & ")
         os.system(save_path + main_command + options + opt_args + "> /dev/null 2>&1 & ")
 
 
