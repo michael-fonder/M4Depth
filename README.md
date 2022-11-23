@@ -123,7 +123,7 @@ If you use our script to download the datasets, you don't have to edit it. Howev
 
 ## Reproducing paper results
 
-In the following subsections, we present script tha allow you to reproduce theexperiments as presented in the paper. These scripts assume that you downloaded the datasets as explained hereabove.
+In the following subsections, we present the scripts that allow you to reproduce the experiments made with M4Depth as presented in the paper. These scripts assume that you downloaded the datasets as explained hereabove.
 
 To benefit from the best code speed, you should compile the cuda implementation of the backprojection if you use a compatible GPU:    
 ```shell
@@ -179,6 +179,10 @@ There is currently no easy one-line command that allows you to test M4Depth dire
 3. Add your dataset as a possible choice in the options for the `--dataset` command line argument.
 
 Once this is done, you should be able to use your dataset with the `main.py` python script.
+
+## Baseline methods performance reproduction
+
+We also provide the code used to get the performance of baseline methods on Mid-Air and TartanAir.  This code can be found in the following GitHub repository: [https://github.com/michael-fonder/M4Depth-Baselines](https://github.com/michael-fonder/M4Depth-Baselines)
 
 ## References
 
