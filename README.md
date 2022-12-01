@@ -2,11 +2,11 @@
 
 This is the reference TensorFlow implementation for training and testing M4Depth, the depth estimation method described in
 
-> **M4Depth: Monocular depth estimation for autonomous vehicles in unseen environments**
+> **Parallax Inference for Robust Temporal Monocular Depth Estimation in Unstructured Environments**
 >
 > [Michaël Fonder](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u225873), [Damien Ernst](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u030242) and [Marc Van Droogenbroeck](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u182591) 
 > 
-> [arXiv pdf](https://arxiv.org/pdf/2105.09847.pdf)
+> [PDF file](https://www.mdpi.com/1424-8220/22/23/9374/pdf), [Sensor website](https://www.mdpi.com/1424-8220/22/23/9374)
 
 ## Overview
 
@@ -18,8 +18,8 @@ M4Depth is deep neural network designed to estimate depth from RGB image sequenc
 KITTI dataset.
 
 This network is the result of two major contributions: 
-* We extend the notion of visual disparity to camera baselines featuring 6-DoF transformations, and present customized cost volumes for this disparity;
-* We use these new cost volumes to build a novel real time and lightweight multi-level architecture;
+* We define a notion of visual parallax between two frames from a generic six-degree-of-freedom (6-DoF) camera motion, and present a way to build cost volumes with this parallax;
+* We use these cost volumes to build a novel lightweight multi-level architecture;
 
 This repository contains all the material necessary to reproduce the results presented in the paper.
 
@@ -58,12 +58,17 @@ This repository contains all the material necessary to reproduce the results pre
 If you use our work in your research, please consider citing our paper:
 
 ```
-@article{Fonder2021M4Depth,
-  title     = {M4Depth: Monocular depth estimation for autonomous vehicles in unseen environments},
+@article{Fonder2022Parallax,
+  title     = {Parallax Inference for Robust Temporal Monocular Depth Estimation in Unstructured Environments},
   author    = {Fonder, Michael and Ernst, Damien and Van Droogenbroeck, Marc},
-  booktitle = {arXiv},
-  month     = {May},
-  year      = {2021}
+  journal   = {Sensors},
+  volume    = {22},
+  number    = {23},
+  pages     = {1-22},
+  month     = {November},
+  year      = {2022},
+  doi       = {10.3390/s22239374}
+  url       = {https://doi.org/10.3390/s22239374}
 }
 ```
 

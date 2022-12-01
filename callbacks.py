@@ -139,7 +139,7 @@ class CustomKittiValidationCallback(ks.callbacks.Callback):
         self.cmd = cmd_args
         self.args = args
 
-        def on_epoch_end(self, epoch, logs=None):
+    def on_epoch_end(self, epoch, logs=None):
         dir_path = os.path.dirname(os.path.realpath(__file__))
         working_dir = os.getcwd()
         rel_path = os.path.relpath(dir_path, start=working_dir)

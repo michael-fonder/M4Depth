@@ -8,4 +8,4 @@ then
     mv "$savepath/best" "$savepath/train"; 
 fi
 
-python finetune-kitti.py --arch_depth=6 --ckpt_dir="$savepath" --log_dir="$savepath/summaries" --records=data --enable_validation
+python finetune-kitti.py --arch_depth=6 --ckpt_dir="$savepath" --log_dir="$savepath/summaries" --records=data --enable_validation $2

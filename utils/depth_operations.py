@@ -1,20 +1,7 @@
-"""
-----------------------------------------------------------------------------------------
-Copyright (c) 2022 - Michael Fonder, University of Liège (ULiège), Belgium.
-
-This program is free software: you can redistribute it and/or modify it under the terms
-of the GNU Affero General Public License as published by the Free Software Foundation,
-either version 3 of the License, or (at your option) any later version.
-This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-See the GNU Affero General Public License for more details.
-You should have received a copy of the GNU Affero General Public License along with this
-program. If not, see < [ https://www.gnu.org/licenses/ | https://www.gnu.org/licenses/ ] >.
-----------------------------------------------------------------------------------------
-
-The functions in this file implement the equations presented in the paper. Please refer to it
-for details about the operations performed here.
-"""
+#!/usr/bin/env python
+#
+# Copyright M4Depth authors 2021. All rights reserved.
+# ==============================================================================
 
 import tensorflow as tf
 from utils import dense_image_warp
@@ -29,11 +16,9 @@ def wrap_feature_block(feature_block, opt_flow):
 
 
 def get_rot_mat(rot):
-    """ Converts a rotation vector into a rotation matrix
-
-    If the vector is of length 3 an "xyz"  small rotation sequence is expected
-    If the vector is of length 4 an "wxyz" quaternion is expected
-    """
+    # Converts a rotation vector into a rotation matrix
+    # If the vector is of length 3 an "xyz"  small rotation sequence is expected
+    # If the vector is of length 4 an "wxyz" quaternion is expected
 
     b, c = rot.get_shape().as_list()
     if c==3:
@@ -70,7 +55,7 @@ def get_rot_mat(rot):
 
 @tf.function
 def get_coords_2d(map, camera):
-    """ Creates a grid containing pixel coordinates normalized by the camera focal length """
+    # Creates a grid containing pixel coordinates normalized by the camera focal length
 
     b, h, w, c = map.get_shape().as_list()
     h_range = tf.range(0., h, 1.0, dtype=tf.float32) + 0.5
@@ -85,16 +70,14 @@ def get_coords_2d(map, camera):
 
 @tf.function
 def reproject(map, depth, rot, trans, camera):
-    """ Spatially warps (reprojects) an input feature map according to given depth map, motion and camera properties """
+    # Spatially warps (reprojects) an input feature map acording to given depth map, motion and camera properties
 
     with tf.name_scope("reproject"):
-        # Test the shape of the inputs
         b,h,w,c = map.get_shape().as_list()
         b, h1, w1, c = depth.get_shape().as_list()
         if w!=w1 or h!=h1:
             raise ValueError('Height and width of map and depth should be the same')
 
-        # Reshape motion data in a format compatible for vector math
         fx = camera["f"][:,0]
         fy = camera["f"][:,1]
 
@@ -106,15 +89,12 @@ def reproject(map, depth, rot, trans, camera):
         rot_mat = get_rot_mat(rot)
         transformation_mat = tf.concat([rot_mat, tf.expand_dims(trans,-1)],-1)
 
-        # Fuse projection matrix K with transformation matrix
         combined_mat = tf.linalg.matmul(proj_mat, transformation_mat)
         combined_mat = tf.reshape(combined_mat, [b,1,1,3,4])
 
-        # Get the relative coordinates for each point of the map
         coords, mesh = get_coords_2d(map, camera)
         pos_vec = tf.expand_dims(tf.concat([coords[:,:,:,:,0]*depth, tf.ones([b,h,w,1])], axis=-1), axis=-1)
 
-        # Compute corresponding coordinates in related frame
         proj_pos = tf.linalg.matmul(combined_mat, pos_vec)
         proj_coord = proj_pos[:,:,:,:2,0]/proj_pos[:,:,:,2:,0]
         rot_pos = tf.linalg.matmul(combined_mat[:,:,:,:,:3],pos_vec[:,:,:,:3,:])
@@ -127,17 +107,20 @@ def reproject(map, depth, rot, trans, camera):
 
 @tf.function
 def recompute_depth(depth, rot, trans, camera, mesh=None):
-    """ Recomputes perceived depth according to given camera motion and specifications """
+    # Recomputes perceived according to given camera motion and specifications
 
     with tf.compat.v1.name_scope("recompute_depth"):
         depth = tf.identity(depth)
         b, h, w, c = depth.get_shape().as_list()
 
-        # Reshape motion data in a format compatible for vector math
-        trans_vec = tf.reshape(-trans, [b, 1, 1, 3, 1])
-        rot_mat = get_rot_mat(rot)[:,-1:,:]
+        trans_vec = []
+        for i in range(b):
+            # rot_mat.append([[rot[i, 1], -rot[i, 0], 1.]])
+            trans_vec.append([-trans[i, 0], -trans[i, 1], -trans[i, 2]])
 
-        # Get the relative coordinates for each point of the map
+        rot_mat = get_rot_mat(rot)[:,-1:,:]
+        trans_vec = tf.reshape(tf.convert_to_tensor(trans_vec), [b, 1, 1, 3, 1])
+
         if mesh is None:
             h_range = tf.range(0., h, 1.0, dtype=tf.float32) + 0.5
             w_range = tf.range(0., w, 1.0, dtype=tf.float32) + 0.5
@@ -147,7 +130,7 @@ def recompute_depth(depth, rot, trans, camera, mesh=None):
         coords_2d = tf.concat([tf.divide(mesh, tf.reshape(camera["f"], [b, 1, 1, 2])), tf.ones([b, h, w, 1])], axis=-1)
         pos_vec = tf.expand_dims(coords_2d, -1)
 
-        # Recompute depth
+        # combined_mat = tf.reshape(tf.linalg.matmul(proj_mat,rot_mat), [b,1,1,3,3])
         trans_vec = tf.linalg.matmul(tf.reshape(rot_mat, [b, 1, 1, 1, 3]), trans_vec)
         proj_pos_rel = tf.linalg.matmul(tf.reshape(rot_mat, [b, 1, 1, 1, 3]), pos_vec)
         new_depth = tf.stop_gradient(proj_pos_rel[:, :, :, :, 0]) * depth + tf.stop_gradient(trans_vec[:, :, :, :, 0])
@@ -155,95 +138,90 @@ def recompute_depth(depth, rot, trans, camera, mesh=None):
 
 
 @tf.function
-def disp2depth(disp, rot, trans, camera):
-    """ Converts a disparity map into a depth map according to given camera motion and specifications """
+def parallax2depth(disp, rot, trans, camera):
+    # Converts a disparity map according to given camera motion and specifications
 
-    with tf.compat.v1.name_scope("disp2depth"):
-        b, h, w = disp.get_shape().as_list()[0:3]
+    b, h, w = disp.get_shape().as_list()[0:3]
 
-        coords2d, _ = get_coords_2d(disp, camera)
+    coords2d, _ = get_coords_2d(disp, camera)
 
-        disp = tf.maximum(tf.reshape(disp, [b, h * w, 1, 1]), 1e-5)
-        coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
-        rot_mat = tf.expand_dims(get_rot_mat(rot), axis=1)
-        t = tf.reshape(trans, [b, 1, 3, 1])
-        f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
+    disp = tf.reshape(disp, [b, h * w, 1, 1])
+    coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
+    rot_mat = tf.expand_dims(get_rot_mat(rot), axis=1)
+    t = tf.reshape(trans, [b, 1, 3, 1])
+    f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
 
-        rot_coords = rot_mat @ coords2d
-        alpha = rot_coords[:, :, -1:, :]
-        proj_coords = rot_coords * f_vec / alpha
-        scaled_t = t * f_vec
+    rot_coords = rot_mat @ coords2d
+    alpha = rot_coords[:, :, -1:, :]
+    proj_coords = rot_coords * f_vec / alpha
+    scaled_t = t * f_vec
 
-        delta_x = scaled_t[:, :, 0, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 0, 0]
-        delta_y = scaled_t[:, :, 1, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 1, 0]
+    delta_x = scaled_t[:, :, 0, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 0, 0]
+    delta_y = scaled_t[:, :, 1, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 1, 0]
 
-        sqrt_value = tf.reshape(tf.sqrt(delta_x ** 2 + delta_y ** 2), [b, h * w, 1, 1])
+    sqrt_value = tf.reshape(tf.sqrt(delta_x ** 2 + delta_y ** 2), [b, h * w, 1, 1])
 
-        depth = (sqrt_value / disp - scaled_t[:, :, -1:, :]) / alpha
+    depth = (sqrt_value / disp - scaled_t[:, :, -1:, :]) / alpha
 
-        return tf.reshape(depth, [b, h, w, 1])
-
-@tf.function
-def depth2disp(depth, rot, trans, camera):
-    """ Converts a depth map into a disparity map according to given camera motion and specifications """
-
-    with tf.compat.v1.name_scope("depth2disp"):
-        b, h, w = depth.get_shape().as_list()[0:3]
-
-        coords2d, _ = get_coords_2d(depth, camera)
-
-        depth = tf.reshape(depth, [b, h * w, 1, 1])
-        coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
-        rot_mat = tf.expand_dims(get_rot_mat(rot), axis=1)
-        t = tf.reshape(trans, [b, 1, 3, 1])
-        f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
-
-        rot_coords = rot_mat @ coords2d
-        alpha = rot_coords[:, :, -1:, :]
-        proj_coords = rot_coords * f_vec / alpha
-        scaled_t = t * f_vec
-
-        delta_x = scaled_t[:, :, 0, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 0, 0]
-        delta_y = scaled_t[:, :, 1, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 1, 0]
-
-        sqrt_value = tf.reshape(tf.sqrt(delta_x ** 2 + delta_y ** 2), [b, h * w, 1, 1])
-
-        disp = sqrt_value / (depth * alpha + scaled_t[:, :, -1:, :])
-
-        return tf.reshape(disp, [b, h, w, 1])
-
+    return tf.reshape(depth, [b, h, w, 1])
 
 @tf.function
-def prev_d2disp(prev_d, rot, trans, camera):
-    """ Converts depth map corresponding to previous time step into the disparity map corresponding to current time step """
+def depth2parallax(depth, rot, trans, camera):
+    # Converts a depth map according to given camera motion and specifications
 
-    with tf.compat.v1.name_scope("prev_d2disp"):
-        b, h, w = prev_d.get_shape().as_list()[0:3]
+    b, h, w = depth.get_shape().as_list()[0:3]
 
-        coords2d, _ = get_coords_2d(prev_d, camera)
+    coords2d, _ = get_coords_2d(depth, camera)
 
-        prev_d = tf.reshape(prev_d, [b, h * w, 1, 1])
-        coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
-        t = tf.reshape(trans, [b, 1, 3, 1])
-        f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
+    depth = tf.reshape(depth, [b, h * w, 1, 1])
+    coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
+    rot_mat = tf.expand_dims(get_rot_mat(rot), axis=1)
+    t = tf.reshape(trans, [b, 1, 3, 1])
+    f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
 
-        coords2d = coords2d *f_vec
-        scaled_t = t * f_vec
+    rot_coords = rot_mat @ coords2d
+    alpha = rot_coords[:, :, -1:, :]
+    proj_coords = rot_coords * f_vec / alpha
+    scaled_t = t * f_vec
 
-        delta = (scaled_t- t[:,:,-1:,:]*coords2d)/(prev_d-t[:,:,-1:,:])
+    delta_x = scaled_t[:, :, 0, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 0, 0]
+    delta_y = scaled_t[:, :, 1, 0] - scaled_t[:, :, 2, 0] * proj_coords[:, :, 1, 0]
 
-        disp = tf.norm(delta[:,:,:2,:], axis=2)
+    sqrt_value = tf.reshape(tf.sqrt(delta_x ** 2 + delta_y ** 2), [b, h * w, 1, 1])
 
-        return tf.stop_gradient(tf.reshape(disp, [b, h, w, 1]))
+    disp = sqrt_value / (depth * alpha + scaled_t[:, :, -1:, :])
+
+    return tf.reshape(disp, [b, h, w, 1])
+
+@tf.function
+def prev_d2para(prev_d, rot, trans, camera):
+    b, h, w = prev_d.get_shape().as_list()[0:3]
+
+    coords2d, _ = get_coords_2d(prev_d, camera)
+
+    prev_d = tf.reshape(prev_d, [b, h * w, 1, 1])
+    coords2d = tf.reshape(coords2d, [b, h * w, 3, 1])
+    t = tf.reshape(trans, [b, 1, 3, 1])
+    f_vec = tf.reshape(tf.concat([camera["f"], tf.ones([b,1])], axis=1), [b, 1, 3, 1])
+
+    coords2d = coords2d *f_vec
+    scaled_t = t * f_vec
+
+    delta = (scaled_t- t[:,:,-1:,:]*coords2d)/(prev_d-t[:,:,-1:,:])
+    # delta = coords2d - proj_coords
+
+    disp = tf.norm(delta[:,:,:2,:], axis=2)
+
+    return tf.stop_gradient(tf.reshape(disp, [b, h, w, 1]))
 
 def tile_in_batch(map, nbre_copies):
     map_shape = map.get_shape().as_list()
     map = tf.expand_dims(map, axis=0)
     map = tf.tile(map, [nbre_copies]+[1 for i in map_shape])
-    return tf.reshape(map, [-1]+map_shape[1:]) # out. shape is the following: [nbre_copies*map_shape[0]]+map_shape[1:])
+    return tf.reshape(map, [-1]+map_shape[1:])#[nbre_copies*map_shape[0]]+map_shape[1:])
 
 @tf.function
-def get_disparity_sweeping_cv(c1, c2, disp_prev_t, disp, rot, trans, camera, search_range, nbre_cuts=1):
+def get_parallax_sweeping_cv(c1, c2, disp_prev_t, disp, rot, trans, camera, search_range, nbre_cuts=1):
     """ Computes the DSCV as presented in the paper """
 
     with tf.compat.v1.name_scope("DSCV"):
@@ -311,8 +289,6 @@ def cost_volume(c1, c2, search_range, name="cost_volume", dilation_rate=1, nbre_
         search_range: Search range (maximum displacement)
     """
     with tf.compat.v1.name_scope(name):
-        c1 = tf.cast(c1, tf.float16)
-        c2 = tf.cast(c2, tf.float16)
         strided_search_range = search_range*dilation_rate
         padded_lvl = tf.pad(c2, [[0, 0], [strided_search_range, strided_search_range], [strided_search_range, strided_search_range], [0, 0]])
         _, h, w, _ = c2.get_shape().as_list()
@@ -321,16 +297,17 @@ def cost_volume(c1, c2, search_range, name="cost_volume", dilation_rate=1, nbre_
         c1_nchw = tf.transpose(c1, perm=[0, 3, 1, 2])
         pl_nchw = tf.transpose(padded_lvl, perm=[0, 3, 1, 2])
 
-        c1_nchw = tf.stack(tf.split(c1_nchw, num_or_size_splits=nbre_cuts, axis=1), axis=4)
-        pl_nchw = tf.stack(tf.split(pl_nchw, num_or_size_splits=nbre_cuts, axis=1), axis=4)
+        c1_nchw = tf.split(c1_nchw, num_or_size_splits=nbre_cuts, axis=1)
+        pl_nchw = tf.split(pl_nchw, num_or_size_splits=nbre_cuts, axis=1)
 
         cost_vol = []
         for y in range(0, max_offset):
             for x in range(0, max_offset):
-                slice = tf.slice(pl_nchw, [0, 0, y * dilation_rate, x * dilation_rate,0], [-1, -1, h, w,-1])
-                cost = tf.reduce_mean(c1_nchw * slice, axis=1)
-                cost_vol.append(cost)
-        cost_vol = tf.concat(cost_vol, axis=3)
+                for k in range(nbre_cuts):
+                    slice = tf.slice(pl_nchw[k], [0, 0, y*dilation_rate, x*dilation_rate], [-1, -1, h, w])
+                    cost = tf.reduce_mean(c1_nchw[k] * slice, axis=1)
+                    cost_vol.append(cost)
+        cost_vol = tf.stack(cost_vol, axis=3)
         cost_vol = tf.nn.leaky_relu(cost_vol, alpha=0.1, name=name)
 
-        return tf.cast(cost_vol, tf.float32)
+        return cost_vol

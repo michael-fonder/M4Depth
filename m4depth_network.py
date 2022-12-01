@@ -91,7 +91,8 @@ class FeaturePyramid(ks.layers.Layer):
 
 
 class DispRefiner(ks.layers.Layer):
-    # Sub-network in charge of refining an input disparity estimate
+    # Sub-network in charge of refining an input parallax estimate
+    # (name to be kept to keep backward compatibility with existing trained weights)
 
     def __init__(self, regularizer_weight=0.0004):
         super(DispRefiner, self).__init__()
@@ -136,7 +137,7 @@ class DispRefiner(ks.layers.Layer):
 
 class DepthEstimatorLevel(ks.layers.Layer):
     # Stackable level for the decoder of the architecture
-    # Outputs both a depth and a disparity map
+    # Outputs both a depth and a parallax map
 
     def __init__(self, settings, depth, regularizer_weight=0.0004):
         super(DepthEstimatorLevel, self).__init__()
@@ -144,7 +145,7 @@ class DepthEstimatorLevel(ks.layers.Layer):
         self.is_training = settings["is_training"]
         self.ablation = settings["ablation"]
 
-        self.disp_refiner = DispRefiner(regularizer_weight=regularizer_weight)
+        self.para_refiner = DispRefiner(regularizer_weight=regularizer_weight)
         self.init = True
         self.lvl_depth = depth
         self.lvl_mul = depth-3
@@ -194,12 +195,12 @@ class DepthEstimatorLevel(ks.layers.Layer):
 
             if prev_l_est is None:
                 # Initial state of variables
-                disp_prev_l = tf.ones([b, h, w, 1])
+                para_prev_l = tf.ones([b, h, w, 1])
                 depth_prev_l = 1000. * tf.ones([b, h, w, 1])
                 other_prev_l = tf.zeros([b, h, w, 4])
             else:
                 other_prev_l = tf.compat.v1.image.resize_bilinear(prev_l_est["other"], [h, w])
-                disp_prev_l = tf.compat.v1.image.resize_bilinear(prev_l_est["disp"], [h, w]) * 2.
+                para_prev_l = tf.compat.v1.image.resize_bilinear(prev_l_est["parallax"], [h, w]) * 2.
                 depth_prev_l = tf.compat.v1.image.resize_bilinear(prev_l_est["depth"], [h, w])
 
             # Reinitialize temporal memory if sample is part of a new sequence
@@ -209,49 +210,49 @@ class DepthEstimatorLevel(ks.layers.Layer):
                 if not self.is_training:
                     self.prev_f_maps.assign(curr_f_maps)
                     self.depth_prev_t.assign(prev_t_depth)
-                curr_l_est = {"depth": depth_prev_l, "disp": disp_prev_l, "other": other_prev_l}
+                curr_l_est = {"depth": depth_prev_l, "parallax": para_prev_l, "other": other_prev_l}
                 return curr_l_est
             else:
                 with tf.name_scope("preprocessor"):
 
-                    disp_prev_t = prev_d2disp(prev_t_depth, rot, trans, camera)
+                    para_prev_t = prev_d2para(prev_t_depth, rot, trans, camera)
 
-                    cv, disp_prev_t_reproj = get_disparity_sweeping_cv(curr_f_maps, prev_f_maps, disp_prev_t,
-                                                                       disp_prev_l, rot, trans, camera, 4, nbre_cuts=nbre_cuts)
+                    cv, para_prev_t_reproj = get_parallax_sweeping_cv(curr_f_maps, prev_f_maps, para_prev_t,
+                                                                       para_prev_l, rot, trans, camera, 4, nbre_cuts=nbre_cuts)
 
                     with tf.name_scope("input_prep"):
-                        input_features = [cv, tf.math.log(disp_prev_l*2**self.lvl_mul)]
+                        input_features = [cv, tf.math.log(para_prev_l*2**self.lvl_mul)]
 
                         if self.ablation.level_memory:
                             input_features.append(other_prev_l)
                         else:
                             print("Ignoring level memory")
 
-                        if self.ablation.SNCV:
+                        if self.ablation.PSCV:
                             autocorr = cost_volume(curr_f_maps, curr_f_maps, 3, nbre_cuts=nbre_cuts)
                             input_features.append(autocorr)
                         else:
-                            print("Skipping sncv")
+                            print("Skipping PSCV")
 
                         if self.ablation.time_recurr:
-                            input_features.append(tf.math.log(disp_prev_t_reproj[:,:,:,4:5]*2**self.lvl_mul))
+                            input_features.append(tf.math.log(para_prev_t_reproj[:,:,:,4:5]*2**self.lvl_mul))
                         else:
                             print("Skipping time recurrence")
 
                         f_input = tf.concat(input_features, axis=3)
 
                 with tf.name_scope("depth_estimator"):
-                    prev_out = self.disp_refiner(f_input)
+                    prev_out = self.para_refiner(f_input)
 
-                    disp = prev_out[0][:, :, :, :1]
+                    para = prev_out[0][:, :, :, :1]
                     other = prev_out[0][:, :, :, 1:]
 
-                    disp_curr_l = tf.exp(tf.clip_by_value(disp, -7., 7.))/2**self.lvl_mul
-                    depth_prev_t = disp2depth(disp_curr_l, rot, trans, camera)
+                    para_curr_l = tf.exp(tf.clip_by_value(para, -7., 7.))/2**self.lvl_mul
+                    depth_prev_t = parallax2depth(para_curr_l, rot, trans, camera)
                     curr_l_est = {
                         "other": tf.identity(other),
                         "depth": tf.identity(depth_prev_t),
-                        "disp": tf.identity(disp_curr_l),
+                        "parallax": tf.identity(para_curr_l),
                     }
 
                     if not self.is_training:
@@ -384,7 +385,7 @@ class M4Depth(ks.models.Model):
 
                 gts = []
                 for sample in traj_samples:
-                    gts.append({"depth":sample["depth"], "disp": depth2disp(sample["depth"], sample["rot"], sample["trans"], data["camera"])})
+                    gts.append({"depth":sample["depth"], "parallax": depth2parallax(sample["depth"], sample["rot"], sample["trans"], data["camera"])})
                 preds = self([traj_samples, data["camera"]], training=True)
 
                 loss = self.m4depth_loss(gts, preds)
@@ -447,7 +448,7 @@ class M4Depth(ks.models.Model):
 
             gts = []
             for sample in traj_samples:
-                gts.append({"depth":sample["depth"], "disp": depth2disp(sample["depth"], sample["rot"], sample["trans"], data["camera"])})
+                gts.append({"depth":sample["depth"], "parallax": depth2parallax(sample["depth"], sample["rot"], sample["trans"], data["camera"])})
             preds = self([traj_samples, data["camera"]], training=False)
             gt = data["depth"][:,-1,:,:,:]
             est = preds["depth"]

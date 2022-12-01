@@ -73,4 +73,4 @@ case "$dataset" in
         ;;
 esac
 
-python main.py --mode=eval --dataset="$dataset" $db_seq_len --arch_depth=6 --ckpt_dir="$savepath" --records="$data"
+python main.py --mode=eval --dataset="$dataset" $db_seq_len --arch_depth=6 --ckpt_dir="$savepath" --records="$data" $3
