@@ -145,7 +145,7 @@ class DepthEstimatorLevel(ks.layers.Layer):
         self.is_training = settings["is_training"]
         self.ablation = settings["ablation"]
 
-        self.para_refiner = DispRefiner(regularizer_weight=regularizer_weight)
+        self.disp_refiner = DispRefiner(regularizer_weight=regularizer_weight)
         self.init = True
         self.lvl_depth = depth
         self.lvl_mul = depth-3
@@ -228,11 +228,11 @@ class DepthEstimatorLevel(ks.layers.Layer):
                         else:
                             print("Ignoring level memory")
 
-                        if self.ablation.PSCV:
+                        if self.ablation.SNCV:
                             autocorr = cost_volume(curr_f_maps, curr_f_maps, 3, nbre_cuts=nbre_cuts)
                             input_features.append(autocorr)
                         else:
-                            print("Skipping PSCV")
+                            print("Skipping SNCV")
 
                         if self.ablation.time_recurr:
                             input_features.append(tf.math.log(para_prev_t_reproj[:,:,:,4:5]*2**self.lvl_mul))
@@ -242,7 +242,7 @@ class DepthEstimatorLevel(ks.layers.Layer):
                         f_input = tf.concat(input_features, axis=3)
 
                 with tf.name_scope("depth_estimator"):
-                    prev_out = self.para_refiner(f_input)
+                    prev_out = self.disp_refiner(f_input)
 
                     para = prev_out[0][:, :, :, :1]
                     other = prev_out[0][:, :, :, 1:]
