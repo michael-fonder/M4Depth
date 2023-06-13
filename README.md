@@ -6,7 +6,7 @@ This is the reference TensorFlow implementation for training and testing M4Depth
 >
 > [Michaël Fonder](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u225873), [Damien Ernst](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u030242) and [Marc Van Droogenbroeck](https://www.uliege.be/cms/c_9054334/fr/repertoire?uid=u182591) 
 > 
-> [PDF file](https://www.mdpi.com/1424-8220/22/23/9374/pdf), [Sensor website](https://www.mdpi.com/1424-8220/22/23/9374)
+> [PDF file](https://www.mdpi.com/1424-8220/22/23/9374/pdf), [Sensors website](https://www.mdpi.com/1424-8220/22/23/9374)
 
 ## Overview
 
